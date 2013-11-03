@@ -1,0 +1,13 @@
+pre code {
+  font-size: 12px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+article {
+  border-bottom: 1px solid gray;
+}
+
+.article-body {
+  margin-top: 10px;
+}
