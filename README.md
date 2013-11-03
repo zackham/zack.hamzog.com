@@ -10,6 +10,10 @@ Simple static blog supporting private posts.
 * Post permalinks.
 * Easy to set up and use. 
 
+## Examples
+
+2 public posts and 1 private post included in posts/ directory. Just load up index.html in your browser to see how it works. Enter `pass` in the text box in the topnav and press `enter` to decrypt the private post.
+
 ## Posting
 
 Create a new file in posts/. Use .md extension for public posts, use .c.md extension for private posts.

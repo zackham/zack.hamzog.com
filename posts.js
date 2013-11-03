@@ -1,5 +1,3 @@
-var blogFiles = ["2013-11-05.enc",
-"2013-11-15.enc",
-"2013-11-01.md",
-"2013-11-02.md",
-"2013-11-14.md"];
+var blogFiles = ["pass_is_the_pass.enc",
+"example1.md",
+"example2.md"];
