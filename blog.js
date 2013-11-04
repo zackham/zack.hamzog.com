@@ -1,5 +1,5 @@
 (function() {
-  var articles, remaining = 0, fileCache = {}, passphrase, section, sections, articleView;
+  var articles, remaining = 0, fileCache = {}, passphrase, section, sections, articleView, passphrases={};
 
   render();
   window.addEventListener("hashchange", render);
@@ -9,9 +9,33 @@
     if(e.which == 13) {
       passphrase = $("#passphrase").val();
       $("#passphrase").val('');
+      decrypt(passphrase);
       render();
     }
   });
+
+  function decrypt(x, passphrase) {
+     return CryptoJS.AES.decrypt(x.replace(/\n/g,''), passphrase).toString(CryptoJS.enc.Utf8);
+  }
+
+  function decryptIndex(passphrase) {
+    console.log("do it");
+    _.each(doolittleIndex.locked, function(x) {
+        console.log("trying with", passphrase, x);
+        console.log(x.replace(/\n/g,''))
+        var unlocked = JSON.parse(decrypt(x, passphrase));
+        doolittleIndex.sections[unlocked.section] = unlocked.posts;
+        passphrases[unlocked.section] = passphrase;
+    });
+  }
+
+  function parseIndex() {
+    _.each(doolittleIndex.sections, function(posts, section) {
+      _.each(posts, function(post) {
+        renderFile(post.file);
+      });
+    });
+  }
 
   function render() {
     articles = [];
@@ -29,16 +53,15 @@
       else
         section = null;
 
-      blogFiles.forEach(function(file) {
-        renderFile(file);
+      _.each(doolittleIndex.sections, function(posts, section) {
+        _.each(posts, function(post) {
+          renderFile(post.file);
+        })
       });
     }
   }
 
   function renderFile(file) {
-    if(file.indexOf(".enc") != -1 && !passphrase || passphrase === '') 
-      return;
-
     remaining++;
     if(fileCache[file]) {
       setTimeout(function() {
@@ -46,7 +69,7 @@
         addArticle(file, fileCache[file]);
       }, 0);
     } else {
-      $.get("posts/" + file, function(x) {
+      $.get(file, function(x) {
         remaining--;
         fileCache[file] = x;
         addArticle(file, x);

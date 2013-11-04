@@ -1,37 +1,9 @@
 require 'io/console'
-
-
-def encrypt
-  files = Dir.glob("posts/*.c.md")
-  puts "Ready to encrypt #{files.size} files: #{files.join(", ")}"
-  print "enter aes-256-cbc encryption password: " 
-  pass = STDIN.noecho(&:gets).strip
-  puts
-  print "Verifying - enter aes-256-cbc encryption password: " 
-  pass2 = STDIN.noecho(&:gets).strip
-  puts
-  if pass != pass2
-    puts "Passwords do not match."
-    exit
-  end
-  files.each do |infile|
-    outfile = infile.gsub(/\.c\.md$/, ".enc")
-    `openssl enc -aes-256-cbc -in #{infile} -out #{outfile} -pass pass:"#{pass}" -e -base64`
-  end
-  puts "DONE. Check in browser to make sure it works."
-  print "Delete decrypted versions? [y/N] "
-  if STDIN.gets =~ /y/ 
-    files.each do |file|
-      `rm #{file}`
-    end
-    puts "Deleted."
-  else
-    puts "NOT deleting"
-  end
-end
+require 'json'
 
 
 def decrypt
+  return 
   files = Dir.glob("posts/*.enc")
   puts "Ready to decrypt #{files.size} files: #{files.join(", ")}"
   print "enter aes-256-cbc encryption password: " 
@@ -45,14 +17,80 @@ def decrypt
   puts "DONE."
 end
 
-def index
-  if Dir.glob("posts/*.c.md").any?
-    puts "There are some .c.md files that need to be deleted. Run blog.rb encrypt."
+def index_files(files)
+  sections = {}
+  files.each do |file|
+    title, date, section = nil
+    File.open(file) do |f|
+      title = f.readline.strip
+      date = f.readline.strip
+      section = f.readline.strip
+    end
+    sections[section] ||= []
+    sections[section] << {
+      title: title,
+      date: date,
+      file: file
+    }
+  end
+  # sort by date desc
+  sections.each{|k, v| sections[k].sort!{|a,b| b[:date] <=> a[:date]}}
+  sections
+end
+
+def request_pass(for_s, verify=true)
+  puts
+  print "Password for #{for_s}: "
+  pass = STDIN.noecho(&:gets).strip
+  puts
+  print "Verify: "
+  pass2 = STDIN.noecho(&:gets).strip
+  puts
+  if pass != pass2
+    puts "Passwords do not match."
     exit
   end
-  files = Dir.glob("posts/*.enc") + Dir.glob("posts/*.md")
-  js = %(var blogFiles = [#{files.map{|f| %("#{f.gsub('posts/','')}")}.join(",\n")}];)
-  File.open("posts.js", "w") {|f| f.write(js) }
+  pass
+end
+
+def encrypt(x, pass)
+  IO.popen('openssl enc -aes-256-cbc -pass pass:"test" -e -base64', 'r+') do |io| 
+    io.write(x)
+    io.close_write 
+    io.read 
+  end
+end
+
+def index
+  decrypt
+  open_sections = index_files(Dir.glob("posts/*"))
+  locked = []
+  dec_sections = index_files(Dir.glob("posts_dec/*"))
+  dec_sections.each do |section, posts|
+    pass = request_pass(section)
+    # encrypt posts
+    enc_posts = []
+    posts.each do |post|
+      enc_post = {
+        title: post[:title],
+        date: post[:date],
+        file: "posts_enc/" + `md5 #{post[:file]}`.gsub(/.* /,'').strip
+      }
+      File.open(enc_post[:file], 'w') {|f| f.write encrypt(File.read(post[:file]), pass)}
+      enc_posts << enc_post
+    end
+    locked << encrypt({
+      section: section,
+      posts: enc_posts
+    }.to_json, pass)
+  end
+
+  index_json = {
+    sections: open_sections,
+    locked: locked
+  }.to_json
+  File.open("posts.js", 'w') {|f| f.write "var doolittleIndex = #{index_json}"}
+
   puts "DONE"
   puts "posts.js written."
 end
@@ -60,9 +98,7 @@ end
 
 args = ARGV.map(&:strip)
 case args[0]
-when /^e/ then encrypt
 when /^d/ then decrypt
-when /^i/ then index
 else 
-  puts "usage: ruby blog.rb encrypt | decrypt | index"
+  index
 end
