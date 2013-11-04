@@ -1,22 +1,80 @@
 (function() {
-  var articles, remaining = 0, fileCache = {}, passphrase, section, sections, articleView, passphrases={};
 
-  render();
-  window.addEventListener("hashchange", render);
+  window.addEventListener("hashchange", renderContent);
+  $("#passphrase").on("keypress", function(e) { if(e.which == 13) tryPass($("#passphrase").val()); });
 
-  // listen for decryption request
-  $("#passphrase").on("keypress", function(e) {
-    if(e.which == 13) {
-      passphrase = $("#passphrase").val();
-      $("#passphrase").val('');
-      decrypt(passphrase);
-      render();
+  function renderBlog() {
+    parseIndex();
+    renderSections();
+
+
+  }
+
+  var postsByFile, allPosts;
+
+  function parseIndex() {
+    postsByFile = {};
+    allPosts = [];
+    _.each(doolittleIndex.sections, function(posts, section) {
+      _.each(posts, function(post) {
+        allPosts.push(post);
+        postsByFile[post.file] = post;
+      });
+    });
+  }
+
+  var sectionTemplate = _.template($("#sectionTemplate").html());
+  function renderSections() {
+    $("#sections").html(sectionTemplate({href: '', name: "All posts", selected: false}));
+    _.each(doolittleIndex.sections, function(posts, section) {
+      var selected = false;
+      $("#sections").append(sectionTemplate({
+        selected: selected,
+        name: section,
+        href: "s=" + escape(section)
+      }));
+    });
+  }
+
+  function renderContent() {
+    var hash = window.location.hash;
+    if(hash.indexOf("f=") != "-1") {
+      var file = hash.substr(hash.indexOf("=") + 1);
+      appendFile(file);
+    } else {
+      var section;
+      if(hash.indexOf("s=") != "-1") {
+        var section = hash.substr(hash.indexOf("=") + 1);
+        renderSection(section);
+      } else {
+        renderAll();
+      }
     }
-  });
+  }
+
+  function renderAll() {
+
+  }
+
+  var toFetch = [], fileCache = {};
+  function appendFile(file) {
+    if(toFetch.length === 0) {
+    toFetch.push(file);
+
+  }
+
+  function renderSection(section) {
+
+  }
+
+  function tryPass(pass) {
+  }
 
   function decrypt(x, passphrase) {
-     return CryptoJS.AES.decrypt(x.replace(/\n/g,''), passphrase).toString(CryptoJS.enc.Utf8);
+    return CryptoJS.AES.decrypt(x.replace(/\n/g,''), passphrase).toString(CryptoJS.enc.Utf8);
   }
+
+  var articles, remaining = 0, fileCache = {}, passphrase, section, sections, articleView, passphrases={};
 
   function decryptIndex(passphrase) {
     console.log("do it");
