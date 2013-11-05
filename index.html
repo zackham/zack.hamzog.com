@@ -23,7 +23,7 @@
 
     <div class="container">
       <div class="row">
-        <div id="articles" class="col-md-9">
+        <div id="posts" class="col-md-9">
         </div>
         <div class="col-md-3">
           <ul id="sections" class="nav nav-pills nav-stacked">
@@ -33,7 +33,7 @@
     <script type="text/html" id="sectionTemplate">
       <li<% if(selected) { %> class="active"<% } %>><a href="#<%= href %>"><%= name %></a></li>
     </script>
-    <script type="text/html" id="articleTemplate">
+    <script type="text/html" id="postTemplate">
       <section itemscope itemtype="http://schema.org/Blog">
         <article itemprop="blogPost" itemscope itemtype="http://schema.org/BlogPosting">
           <h1 itemprop="name"><a href="#f=<%= file %>"><%= title %></a></h1>
@@ -41,7 +41,7 @@
             <time itemprop="dateCreated" datetime="<%= date %>"><%= dateFormatted %></time>
             <i itemprop="articleSection"><%= section %></i>
           </p>
-          <div itemprop="articleBody" class="article-body"><%= body %></div>
+          <div itemprop="articleBody" class="article-body"><%= content %></div>
         </article>
       </section>
     </script>

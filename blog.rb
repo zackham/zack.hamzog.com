@@ -2,19 +2,31 @@ require 'io/console'
 require 'json'
 
 
-def decrypt
-  return 
-  files = Dir.glob("posts/*.enc")
-  puts "Ready to decrypt #{files.size} files: #{files.join(", ")}"
-  print "enter aes-256-cbc encryption password: " 
-  pass = STDIN.noecho(&:gets).strip
-  puts
-  files.each do |infile|
-    outfile = infile.gsub(/\.enc$/, ".c.md")
-    `openssl enc -aes-256-cbc -in #{infile} -out #{outfile} -pass pass:"#{pass}" -d -base64`
-    system "head #{outfile}"
+def decrypt_all
+  return true if !File.exists?("posts.js")
+  x = JSON.parse(File.read("posts.js").gsub(/^.*? = /, ''))
+  while x["locked"].size > 0
+    puts "#{x["locked"].size} remaining."
+    pass = request_pass("any locked section", false)
+    still_locked = []
+    x["locked"].each do |locked|
+      unlocked = begin
+                   JSON.parse(decrypt(locked, pass))
+                 rescue
+                   still_locked << locked
+                   next
+                 end
+      unlocked["posts"].each do |post|
+        File.open(post["orig_file"], 'w') {|f|
+          puts "Writing #{post["orig_file"]}"
+          f.write(decrypt(File.read(post["file"]), pass))
+        }
+      end
+    end
+    x["locked"] = still_locked
   end
-  puts "DONE."
+  puts "Done decrypting"
+  true
 end
 
 def index_files(files)
@@ -43,18 +55,28 @@ def request_pass(for_s, verify=true)
   print "Password for #{for_s}: "
   pass = STDIN.noecho(&:gets).strip
   puts
-  print "Verify: "
-  pass2 = STDIN.noecho(&:gets).strip
-  puts
-  if pass != pass2
-    puts "Passwords do not match."
-    exit
+  if verify
+    print "Verify: "
+    pass2 = STDIN.noecho(&:gets).strip
+    puts
+    if pass != pass2
+      puts "Passwords do not match."
+      exit
+    end
   end
   pass
 end
 
+def decrypt(x, pass)
+  IO.popen("openssl enc -aes-256-cbc -pass pass:\"#{pass}\" -d -base64", 'r+') do |io| 
+    io.write(x)
+    io.close_write 
+    io.read 
+  end
+end
+
 def encrypt(x, pass)
-  IO.popen('openssl enc -aes-256-cbc -pass pass:"test" -e -base64', 'r+') do |io| 
+  IO.popen("openssl enc -aes-256-cbc -pass pass:\"#{pass}\" -e -base64", 'r+') do |io| 
     io.write(x)
     io.close_write 
     io.read 
@@ -62,19 +84,21 @@ def encrypt(x, pass)
 end
 
 def index
-  decrypt
+  exit unless decrypt_all
+  `rm posts_enc/*`
   open_sections = index_files(Dir.glob("posts/*"))
   locked = []
   dec_sections = index_files(Dir.glob("posts_dec/*"))
   dec_sections.each do |section, posts|
-    pass = request_pass(section)
+    pass = request_pass("section #{section}")
     # encrypt posts
     enc_posts = []
     posts.each do |post|
       enc_post = {
         title: post[:title],
         date: post[:date],
-        file: "posts_enc/" + `md5 #{post[:file]}`.gsub(/.* /,'').strip
+        file: "posts_enc/" + `md5 #{post[:file]}`.gsub(/.* /,'').strip,
+        orig_file: post[:file]
       }
       File.open(enc_post[:file], 'w') {|f| f.write encrypt(File.read(post[:file]), pass)}
       enc_posts << enc_post
@@ -93,6 +117,11 @@ def index
 
   puts "DONE"
   puts "posts.js written."
+  puts 
+  print "Delete decrypted posts? y/[n]: "
+  if STDIN.gets =~ /y/
+    `rm posts_dec/*`
+  end
 end
 
 
