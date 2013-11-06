@@ -5,6 +5,7 @@ TODO
 doolittle todos:
 
 * if a file in posts_enc has any periods warn the user don't just delete
+* make decrypted posts render instead of their encrypted counterparts
 * look inside of directories when indexing
 * make directories that don't exist when decrypting
 * support spaces in section names
