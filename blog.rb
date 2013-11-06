@@ -84,29 +84,36 @@ def encrypt(x, pass)
 end
 
 def index
+  print "Delete decrypted posts? y/[N]: "
+  keep_dec = STDIN.gets !~ /y/
   exit unless decrypt_all
   `rm posts_enc/*`
-  open_sections = index_files(Dir.glob("posts/*"))
+
+  open_section_files = Dir.glob("posts/*")
+  open_section_files += Dir.glob("posts_dec/*") if keep_dec
+  open_sections = index_files(open_section_files)
   locked = []
-  dec_sections = index_files(Dir.glob("posts_dec/*"))
-  dec_sections.each do |section, posts|
-    pass = request_pass("section #{section}")
-    # encrypt posts
-    enc_posts = []
-    posts.each do |post|
-      enc_post = {
-        title: post[:title],
-        date: post[:date],
-        file: "posts_enc/" + `md5 #{post[:file]}`.gsub(/.* /,'').strip,
-        orig_file: post[:file]
-      }
-      File.open(enc_post[:file], 'w') {|f| f.write encrypt(File.read(post[:file]), pass)}
-      enc_posts << enc_post
+  unless keep_dec
+    dec_sections = index_files(Dir.glob("posts_dec/*"))
+    dec_sections.each do |section, posts|
+      pass = request_pass("section #{section}")
+      # encrypt posts
+      enc_posts = []
+      posts.each do |post|
+        enc_post = {
+          title: post[:title],
+          date: post[:date],
+          file: "posts_enc/" + `md5 #{post[:file]}`.gsub(/.* /,'').strip,
+          orig_file: post[:file]
+        }
+        File.open(enc_post[:file], 'w') {|f| f.write encrypt(File.read(post[:file]), pass)}
+        enc_posts << enc_post
+      end
+      locked << encrypt({
+        section: section,
+        posts: enc_posts
+      }.to_json, pass)
     end
-    locked << encrypt({
-      section: section,
-      posts: enc_posts
-    }.to_json, pass)
   end
 
   index_json = {
@@ -117,10 +124,9 @@ def index
 
   puts "DONE"
   puts "posts.js written."
-  puts 
-  print "Delete decrypted posts? y/[n]: "
-  if STDIN.gets =~ /y/
+  unless keep_dec
     `rm posts_dec/*`
+    puts "DELETED posts_dec/*"
   end
 end
 
