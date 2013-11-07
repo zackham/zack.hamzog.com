@@ -12,3 +12,4 @@ doolittle todos:
 done!
 
 * make decrypted posts render instead of their encrypted counterparts
+* get it on s3
