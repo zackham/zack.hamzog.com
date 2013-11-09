@@ -4,7 +4,12 @@ TODO
 
 doolittle todos:
 
-* make decrypted posts render instead of their encrypted counterparts
+* if a file in posts_enc has any periods warn the user don't just delete
 * look inside of directories when indexing
 * make directories that don't exist when decrypting
 * support spaces in section names
+
+done!
+
+* make decrypted posts render instead of their encrypted counterparts
+* get it on s3
